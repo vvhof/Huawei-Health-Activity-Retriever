@@ -1,3 +1,8 @@
+from __future__ import print_statement
+import time
+import swagger_client
+from swagger_client.rest import ApiException
+from pprint import pprint
 import argparse
 import ftplib
 import subprocess
@@ -11,14 +16,14 @@ TCX_CONVERTER_PATH = f'{sys.path[0]}/third-party/Huawei-TCX-Converter.py'
 TEMP_DIR = f'{sys.path[0]}/tmp'
 DEFAULT_OUTPUT_DIR = './output'
 
-
 def _init_arg_parse():
     parser = argparse.ArgumentParser(description='Retrieves and processes activity data from Huawei Health.', conflict_handler='resolve')
     ftp_group = parser.add_argument_group('FTP Arguments')
     ftp_group.add_argument('-h', '--host', help='Hostname/IP address of FTP server', required=True)
     ftp_group.add_argument('-u', '--user', help='FTP user - leave empty for anonymous authentication', default='')
     ftp_group.add_argument('-p', '--password', help='FTP password - leave empty for anonymous authentication', default='')
-
+    parser.add_argument('-s', '--strava-token', help=f'Strava Token', default='YOUR_ACCESS_TOKEN')
+    
     parser.add_argument('-o', '--output-dir', help=f'Output folder for processed activities. Defaults to {DEFAULT_OUTPUT_DIR}', default=DEFAULT_OUTPUT_DIR)
     parser.add_argument('-f', '--fresh', help='Clears all existing data and pulls all available data fresh from the device', action='store_true')
 
@@ -92,7 +97,23 @@ def rename_file(file, output_dir):
     p = Path(f'{output_dir}/{file}.tcx')
     p.replace(Path(p.parent, f'{datetime_from} to {datetime_to}{p.suffix}'))
 
-
+def upload_file(file, strava-token):
+    # Configure OAuth2 access token for authorization: strava_oauth
+    swagger_client.configuration.access_token = strava-token
+    api_instance = swagger_client.UploadsApi()
+    name = name_example # String | The desired name of the resulting activity. (optional)
+    description = description_example # String | The desired description of the resulting activity. (optional)
+    trainer = trainer_example # String | Whether the resulting activity should be marked as having been performed on a trainer. (optional)
+    commute = commute_example # String | Whether the resulting activity should be tagged as a commute. (optional)
+    dataType = dataType_example # String | The format of the uploaded file. (optional)
+    externalId = externalId_example # String | The desired external identifier of the resulting activity. (optional)
+    try: 
+        # Upload Activity
+        api_response = api_instance.createUpload(file=file, name=name, description=description, trainer=trainer, commute=commute, dataType=dataType, externalId=externalId)
+        pprint(api_response)
+    except ApiException as e:
+        print("Exception when calling UploadsApi->createUpload: %s\n" % e)
+    
 def timestamp_to_datetime(micro_timestamp):
     date_str = datetime.datetime.fromtimestamp(micro_timestamp / 1000).replace(microsecond=0).isoformat()
     return date_str.replace(':', '_')
@@ -109,7 +130,7 @@ def main():
     # If the user wants to do a fresh run, clear tmp directory
     if args.fresh:
         clear_tmp()
-
+    
     files = transfer_files(args.host, args.user, args.password)
 
     if files:
@@ -120,7 +141,8 @@ def main():
     for file in files:
         process_file(file, args.output_dir)
         rename_file(file, args.output_dir)
-
+        if args.strava-token:
+            upload_file(file, args.strava-token)
 
 if __name__ == '__main__':
     main()
